@@ -9,24 +9,6 @@ interface PermissionSelectorProps {
   companyName: string;  
 }
 
-const PUBLIC = {label: "Public - Anyone on the internet", value: "public"};
-const INTERNAL = {label: "Internal - Only organization members", value:"internal"};
-const CONFIDENTIAL = {label: "Confidential - Only people invited to the space", value: "confidential"};
-
-const PRIVACY_OPTIONS = [
-  PUBLIC,
-  INTERNAL,
-  CONFIDENTIAL,
-]
-
-const PERMISSIONS = [
-  {value: 'full-access', label: "Has Full Access"},
-  {value: 'edit', label: "Can Edit"},
-  {value: 'comment', label: "Can Comment"},
-  {value: 'view', label: "Can View"},
-]
-const DEFAULT_PERMISSION = PERMISSIONS[3];
-
 
 export default function PermissionSelector({companyName}: PermissionSelectorProps) {
   const [privacy, setPrivacy] = useState(CONFIDENTIAL.value);
@@ -38,6 +20,18 @@ export default function PermissionSelector({companyName}: PermissionSelectorProp
     </>
   )
 }
+
+
+const PUBLIC = {label: "Public - Anyone on the internet", value: "public"};
+const INTERNAL = {label: "Internal - Only organization members", value:"internal"};
+const CONFIDENTIAL = {label: "Confidential - Only people invited to the space", value: "confidential"};
+
+const PRIVACY_OPTIONS = [
+  PUBLIC,
+  INTERNAL,
+  CONFIDENTIAL,
+]
+
 
 function PrivacyLevel({setPrivacy}) {
   return (
@@ -58,8 +52,6 @@ function PrivacyLevel({setPrivacy}) {
 
 
 function AccessLevel({privacy, companyName}) {
-  
-
   if (privacy === PUBLIC.value) {
       return (
         <div className="flex flex-col gap-2">
@@ -84,8 +76,17 @@ function AccessLevel({privacy, companyName}) {
 }
 
 
+const COMPANY_PERMISSIONS = [
+  {value: 'full-access', label: "Has Full Access"},
+  {value: 'edit', label: "Can Edit"},
+  {value: 'comment', label: "Can Comment"},
+  {value: 'view', label: "Can View"},
+]
+const COMPANY_DEFAULT_PERMISSION = COMPANY_PERMISSIONS[2];
+
+
 function CompanyAccessLevel({companyName}) {
-  const [currentPermission, setCurrentPermission] = useState(DEFAULT_PERMISSION);
+  const [currentPermission, setCurrentPermission] = useState(COMPANY_DEFAULT_PERMISSION);
 
   return (
     <div className="grid grid-cols-[70%_30%] gap-2 w-full">
@@ -95,7 +96,7 @@ function CompanyAccessLevel({companyName}) {
       </div>
       <SelectBoxNoLabel
         onChange={option => setCurrentPermission(option)}
-        options={PERMISSIONS}
+        options={COMPANY_PERMISSIONS}
         value={currentPermission}
       /> 
     </div>
@@ -103,8 +104,15 @@ function CompanyAccessLevel({companyName}) {
 }
 
 
+const INTERNET_PERMISSIONS = [
+  {value: 'comment', label: "Can Comment"},
+  {value: 'view', label: "Can View"},
+]
+const INTERNET_DEFAULT_PERMISSION = INTERNET_PERMISSIONS[1];
+
+
 function InternetAccessLevel() {
-  const [currentPermission, setCurrentPermission] = useState(DEFAULT_PERMISSION);
+  const [currentPermission, setCurrentPermission] = useState(INTERNET_DEFAULT_PERMISSION);
 
   return (
     <div className="grid grid-cols-[70%_30%] gap-2 w-full">
@@ -114,7 +122,7 @@ function InternetAccessLevel() {
       </div>
       <SelectBoxNoLabel
         onChange={option => setCurrentPermission(option)}
-        options={PERMISSIONS}
+        options={INTERNET_PERMISSIONS}
         value={currentPermission}
       /> 
     </div>
