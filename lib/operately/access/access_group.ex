@@ -2,6 +2,9 @@ defmodule Operately.Access.Group do
   use Operately.Schema
 
   schema "access_groups" do
+    has_many :memberships, Operately.Access.GroupMembership, foreign_key: :access_group_id
+
+    belongs_to :group, Operately.Groups.Group, foreign_key: :group_id
 
     timestamps()
   end
@@ -12,7 +15,7 @@ defmodule Operately.Access.Group do
 
   def changeset(group, attrs) do
     group
-    |> cast(attrs, [])
+    |> cast(attrs, [:group_id])
     |> validate_required([])
   end
 end
