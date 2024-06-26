@@ -15,7 +15,7 @@ defmodule Operately.Operations.GroupMembersAdding do
 
   defp insert_members(multi, people_ids, group) do
     people_ids
-    |> Enum.map(fn id ->
+    |> Enum.map(fn {id, _} ->
       Member.changeset(%Member{}, %{
         group_id: group.id,
         person_id: id
@@ -28,10 +28,10 @@ defmodule Operately.Operations.GroupMembersAdding do
   end
 
   defp insert_access_group_memberships(multi, people_ids, group) do
-    access_group_id = fetch_members_access_group_id(group)
-
     people_ids
-    |> Enum.map(fn id ->
+    |> Enum.map(fn {id, access_level} ->
+      access_group_id = fetch_members_access_group_id(group, access_level)
+
       GroupMembership.changeset(%{
         access_group_id: access_group_id,
         person_id: id,
@@ -45,15 +45,12 @@ defmodule Operately.Operations.GroupMembersAdding do
     end)
   end
 
-  # This function is not correct. We need a proper way
-  # to query the members access group
-  defp fetch_members_access_group_id(group) do
+  defp fetch_members_access_group_id(group, access_level) do
     from(g in Operately.Access.Group,
       join: b in Operately.Access.Binding, on: b.access_group_id == g.id,
-      where: g.group_id == ^group.id and b.access_level != 100,
-      limit: 1,
+      where: g.group_id == ^group.id and b.access_level == ^access_level,
       select: g.id
     )
-    |> Repo.one()
+    |> Repo.one!()
   end
 end
