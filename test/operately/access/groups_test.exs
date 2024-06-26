@@ -5,6 +5,8 @@ defmodule Operately.AccessGroupsTest do
   alias Operately.Access.Group
 
   import Operately.AccessFixtures
+  import Operately.PeopleFixtures
+  import Operately.CompaniesFixtures
 
   describe "access_groups" do
     test "list_groups/0 returns all groups" do
@@ -15,6 +17,16 @@ defmodule Operately.AccessGroupsTest do
     test "get_group!/1 returns the group with given id" do
       group = group_fixture()
       assert Access.get_group!(group.id) == group
+    end
+
+    test "get_person_group!/1 returns person's group" do
+      company = company_fixture()
+      person = person_fixture(%{company_id: company.id})
+      group_for_person_fixture(person)
+
+      assert nil != Access.get_person_group(person)
+
+      assert nil != Access.get_person_group(person.id)
     end
 
     test "create_group/1 with valid data creates a group" do

@@ -22,6 +22,20 @@ defmodule Operately.AccessFixtures do
     group
   end
 
+  # Temporary: in the near future, when a group is
+  # automatically created for a user, this fixture
+  # can be deleted.
+  def group_for_person_fixture(person) do
+    group = group_fixture()
+
+    group_membership_fixture(%{
+      access_group_id: group.id,
+      person_id: person.id,
+    })
+
+    group
+  end
+
   def binding_fixture(attrs \\ %{}) do
     {:ok, binding} =
       attrs

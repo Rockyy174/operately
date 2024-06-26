@@ -45,6 +45,26 @@ defmodule Operately.Access do
 
   def get_group!(id), do: Repo.get!(Group, id)
 
+  def get_person_group(person) when is_struct(person, Operately.People.Person) do
+    get_person_group(person.id)
+  end
+
+  # This query is not correct. We need to find a
+  # way to query the person's individual group
+  def get_person_group(person_id) when is_binary(person_id) do
+    IO.puts("get_person_group/1 needs to be fixed")
+
+    from(g in Group,
+      join: m in assoc(g, :memberships),
+      group_by: g.id,
+      where: m.person_id == ^person_id,
+      having: count(m.id) == 1,
+      limit: 1,
+      select: g
+    )
+    |> Repo.one()
+  end
+
   def create_group(attrs \\ %{}) do
     %Group{}
     |> Group.changeset(attrs)
