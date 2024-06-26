@@ -3,6 +3,7 @@ defmodule Operately.Access.Group do
 
   schema "access_groups" do
     has_many :memberships, Operately.Access.GroupMembership, foreign_key: :access_group_id
+    has_many :bindings, Operately.Access.Binding, foreign_key: :access_group_id
 
     belongs_to :group, Operately.Groups.Group, foreign_key: :group_id
 
