@@ -4,7 +4,8 @@ defmodule Operately.Operations.ProjectCreation do
   alias Operately.Projects.Contributor
   alias Operately.Projects.Project
   alias Operately.Activities
-  alias Operately.Access.Context
+  alias Operately.Access
+  alias Operately.Access.{Context, Binding}
   alias Ecto.Multi
 
   defstruct [
@@ -40,23 +41,12 @@ defmodule Operately.Operations.ProjectCreation do
         project_id: changes.project.id,
       })
     end)
-    |> Multi.insert(:champion, fn changes ->
-      Contributor.changeset(%{
-        project_id: changes.project.id,
-        person_id: params.champion_id,
-        responsibility: " ",
-        role: :champion
-      })
-    end)
-    |> Multi.insert(:reviewer, fn changes ->
-      Contributor.changeset(%{
-        project_id: changes.project.id,
-        person_id: params.reviewer_id,
-        responsibility: " ",
-        role: :reviewer
-      })
-    end)
+    |> insert_champion(params.champion_id)
+    |> insert_champion_binding(params.champion_id)
+    |> insert_reviewer(params.reviewer_id)
+    |> insert_reviewer_binding(params.reviewer_id)
     |> Multi.run(:creator_role, fn _repo, changes -> assign_creator_role(changes.project, params) end)
+    |> insert_creator_binding(params)
     |> Multi.run(:phases, fn _repo, changes -> record_phase_histories(changes.project) end)
     |> Activities.insert_sync(params.creator_id, :project_created, fn changes -> %{
       company_id: changes.project.company_id,
@@ -64,6 +54,52 @@ defmodule Operately.Operations.ProjectCreation do
     } end)
     |> Repo.transaction()
     |> Repo.extract_result(:project)
+  end
+
+  defp insert_champion(multi, champion_id) do
+    Multi.insert(multi, :champion, fn changes ->
+      Contributor.changeset(%{
+        project_id: changes.project.id,
+        person_id: champion_id,
+        responsibility: " ",
+        role: :champion
+      })
+    end)
+  end
+
+  defp insert_champion_binding(multi, champion_id) do
+    Multi.insert(multi, :champion_binding, fn changes ->
+      access_group = Access.get_person_group(champion_id)
+
+      Binding.changeset(%{
+        access_group_id: access_group.id,
+        access_context_id: changes.context.id,
+        access_level: 100,
+      })
+    end)
+  end
+
+  defp insert_reviewer(multi, reviewer_id) do
+    Multi.insert(multi, :reviewer, fn changes ->
+      Contributor.changeset(%{
+        project_id: changes.project.id,
+        person_id: reviewer_id,
+        responsibility: " ",
+        role: :reviewer
+      })
+    end)
+  end
+
+  defp insert_reviewer_binding(multi, reviewer_id) do
+    Multi.insert(multi, :reviewer_binding, fn changes ->
+      access_group = Access.get_person_group(reviewer_id)
+
+      Binding.changeset(%{
+        access_group_id: access_group.id,
+        access_context_id: changes.context.id,
+        access_level: 100,
+      })
+    end)
   end
 
   defp assign_creator_role(project, %__MODULE__{} = params) do
@@ -86,6 +122,27 @@ defmodule Operately.Operations.ProjectCreation do
         })
 
         {:ok, params.creator_role}
+    end
+  end
+
+  defp insert_creator_binding(multi, params) do
+    cond do
+      params.champion_id == params.creator_id ->
+        multi
+      params.reviewer_id == params.creator_id ->
+        multi
+      params.creator_is_contributor == "no" ->
+        multi
+      params.creator_is_contributor == "yes" ->
+        Multi.insert(multi, :creator_binding, fn changes ->
+          access_group = Access.get_person_group(params.creator_id)
+
+          Binding.changeset(%{
+            access_group_id: access_group.id,
+            access_context_id: changes.context.id,
+            access_level: 70,
+          })
+        end)
     end
   end
 
