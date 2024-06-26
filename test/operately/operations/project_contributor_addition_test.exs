@@ -11,6 +11,8 @@ defmodule Operately.Operations.ProjectContributorAdditionTest do
   import Operately.AccessFixtures, only: [group_for_person_fixture: 1]
 
   alias Operately.Repo
+  alias Operately.Access
+  alias Operately.Access.Binding
   alias Operately.Projects
   alias Operately.Projects.Contributor
   alias Operately.Activities.Activity
@@ -46,6 +48,19 @@ defmodule Operately.Operations.ProjectContributorAdditionTest do
     assert contributor.role == :contributor
   end
 
+  test "ProjectContributorAddition operation creates access binding for contributor", ctx do
+    assert nil == fetch_access_binding(ctx.project, ctx.contributor, 70)
+
+    Operately.Operations.ProjectContributorAddition.run(ctx.creator, %{
+      project_id: ctx.project.id,
+      person_id: ctx.contributor.id,
+      responsibility: "Developer",
+      role: :contributor
+    })
+
+    assert nil != fetch_access_binding(ctx.project, ctx.contributor, 70)
+  end
+
   test "ProjectContributorAddition operation creates activity and notification", ctx do
     Oban.Testing.with_testing_mode(:manual, fn ->
       Operately.Operations.ProjectContributorAddition.run(ctx.creator, %{
@@ -64,5 +79,17 @@ defmodule Operately.Operations.ProjectContributorAdditionTest do
 
     assert 1 == notifications_count()
     assert nil != fetch_notification(activity.id)
+  end
+
+  #
+  # Helpers
+  #
+
+  defp fetch_access_binding(project, person, access_level) do
+    context = Access.get_context!(project_id: project.id)
+    group = Access.get_person_group(person)
+
+    from(b in Binding, where: b.access_context_id == ^context.id and b.access_group_id == ^group.id and b.access_level == ^access_level)
+    |> Repo.one()
   end
 end
