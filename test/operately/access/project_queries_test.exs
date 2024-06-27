@@ -7,21 +7,18 @@ defmodule Operately.Access.QueriesTest do
   import Operately.PeopleFixtures
   import Operately.GroupsFixtures
   import Operately.ProjectsFixtures
-  import Operately.AccessFixtures, only: [group_for_person_fixture: 1]
 
   alias Operately.Repo
   alias Operately.Projects.Project
+  alias Operately.Access
   alias Operately.Access.Binding
 
   setup do
     {company, admin} = create_company_and_admin()
 
     creator = person_fixture(%{company_id: company.id})
-    group_for_person_fixture(creator)
     champion = person_fixture(%{company_id: company.id})
-    group_for_person_fixture(champion)
     reviewer = person_fixture(%{company_id: company.id})
-    group_for_person_fixture(reviewer)
 
     group = group_fixture(creator)
     project = project_fixture(%{company_id: company.id, creator_id: creator.id, champion_id: champion.id, reviewer_id: reviewer.id, group_id: group.id, creator_is_contributor: "no"})
@@ -129,7 +126,7 @@ defmodule Operately.Access.QueriesTest do
     company = company_fixture() |> Repo.preload(:access_context)
 
     admin = person_fixture(%{company_id: company.id})
-    admin_group = group_for_person_fixture(admin)
+    admin_group = Access.get_group(person_id: admin.id)
 
     Binding.changeset(%{
       access_group_id: admin_group.id,

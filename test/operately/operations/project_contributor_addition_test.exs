@@ -8,7 +8,6 @@ defmodule Operately.Operations.ProjectContributorAdditionTest do
   import Operately.PeopleFixtures
   import Operately.GroupsFixtures
   import Operately.ProjectsFixtures
-  import Operately.AccessFixtures, only: [group_for_person_fixture: 1]
 
   alias Operately.Repo
   alias Operately.Access
@@ -24,8 +23,6 @@ defmodule Operately.Operations.ProjectContributorAdditionTest do
 
     contributor = person_fixture_with_account(%{company_id: company.id})
     project = project_fixture(%{company_id: company.id, creator_id: creator.id, group_id: group.id})
-
-    group_for_person_fixture(contributor)
 
     {:ok, creator: creator, contributor: contributor, project: project}
   end
@@ -87,7 +84,7 @@ defmodule Operately.Operations.ProjectContributorAdditionTest do
 
   defp fetch_access_binding(project, person, access_level) do
     context = Access.get_context!(project_id: project.id)
-    group = Access.get_person_group(person)
+    group = Access.get_group!(person_id: person.id)
 
     from(b in Binding, where: b.access_context_id == ^context.id and b.access_group_id == ^group.id and b.access_level == ^access_level)
     |> Repo.one()

@@ -7,7 +7,6 @@ defmodule Operately.Operations.ProjectCreationTest do
   import Operately.PeopleFixtures
   import Operately.GroupsFixtures
   import Operately.GoalsFixtures
-  import Operately.AccessFixtures, only: [group_for_person_fixture: 1]
 
   alias Operately.Repo
   alias Operately.Access
@@ -19,13 +18,8 @@ defmodule Operately.Operations.ProjectCreationTest do
     company = company_fixture()
 
     creator = person_fixture_with_account(%{company_id: company.id})
-    group_for_person_fixture(creator)
-
     champion = person_fixture_with_account(%{company_id: company.id})
-    group_for_person_fixture(champion)
-
     reviewer = person_fixture_with_account(%{company_id: company.id})
-    group_for_person_fixture(reviewer)
 
     group = group_fixture(creator)
     goal = goal_fixture(creator, %{space_id: group.id, targets: []})
