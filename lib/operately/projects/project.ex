@@ -167,4 +167,16 @@ defmodule Operately.Projects.Project do
 
     Map.put(project, :access_levels, access_levels)
   end
+
+  def preload_contributors_access_level(project) do
+    context = Operately.Access.get_context!(project_id: project.id)
+
+    contributors = Enum.map(project.contributors, fn contributor ->
+      access_level = Operately.Access.AccessLevels.load(context.id, contributor.person_id)
+
+      Map.put(contributor, :access_level, access_level)
+    end)
+
+    Map.put(project, :contributors, contributors)
+  end
 end

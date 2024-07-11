@@ -10,6 +10,10 @@ defmodule Operately.Access.AccessLevels do
     :space,
   ]
 
+  def load(context_id, person_id) do
+    query_access_level(context_id, {:person_id, person_id}, nil)
+  end
+
   def load(context_id, company_id, space_id) do
     %__MODULE__{
       public: query_access_level(context_id, {:company_id, company_id}, :anonymous),
