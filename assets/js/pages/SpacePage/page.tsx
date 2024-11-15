@@ -3,6 +3,7 @@ import React from "react";
 import * as Pages from "@/components/Pages";
 import * as Paper from "@/components/PaperContainer";
 import * as Spaces from "@/models/spaces";
+import * as Companies from "@/models/companies";
 
 import { Feed, useItemsQuery } from "@/features/Feed";
 import { PrimaryButton, SecondaryButton } from "@/components/Buttons";
@@ -41,17 +42,31 @@ export function Page() {
 }
 
 function SpaceEdit() {
-  const { space } = useLoadedData();
+  const { company, space } = useLoadedData();
+  const hasResourceHubsFeature = Companies.hasFeature(company, "resource_hubs");
 
   if (space.permissions?.canEdit !== true) return null;
 
-  return (
-    <div className="absolute right-4 top-4">
-      <SecondaryButton size="xs" linkTo={Paths.spaceEditPath(space.id!)} testId="edit-space">
-        Edit
-      </SecondaryButton>
-    </div>
-  );
+  if (!hasResourceHubsFeature) {
+    return (
+      <div className="absolute right-4 top-4">
+        <SecondaryButton size="xs" linkTo={Paths.spaceEditPath(space.id!)} testId="edit-space">
+          Edit
+        </SecondaryButton>
+      </div>
+    );
+  } else {
+    return (
+      <div className="absolute right-4 top-4 flex gap-2">
+        <SecondaryButton size="xs" linkTo={Paths.spaceEditPath(space.id!)} testId="edit-space">
+          Edit
+        </SecondaryButton>
+        <SecondaryButton size="xs" linkTo={Paths.spaceToolsPath(space.id!)} testId="edit-space-tools">
+          Set up tools
+        </SecondaryButton>
+      </div>
+    );
+  }
 }
 
 function SpaceHeader({ space }: { space: Spaces.Space }) {

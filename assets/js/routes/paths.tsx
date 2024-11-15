@@ -196,6 +196,10 @@ export class Paths {
     return createCompanyPath(["spaces", spaceId]);
   }
 
+  static spaceToolsPath(spaceId: string) {
+    return createCompanyPath(["spaces", spaceId, "tools"]);
+  }
+
   static spaceEditPath(spaceId: string) {
     return createCompanyPath(["spaces", spaceId, "edit"]);
   }
