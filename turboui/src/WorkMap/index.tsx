@@ -49,12 +49,12 @@ export namespace WorkMap {
     completedOn?: string;
   }
 
-  interface GoalItem extends BaseItem {
+  export interface GoalItem extends BaseItem {
     type: "goal";
     timeframe: TimeframeSelector.Timeframe;
   }
 
-  interface ProjectItem extends BaseItem {
+  export interface ProjectItem extends BaseItem {
     type: "project";
     startedAt: string;
   }
