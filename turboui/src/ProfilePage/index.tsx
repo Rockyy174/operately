@@ -32,19 +32,23 @@ export namespace ProfilePage {
 }
 
 export function ProfilePage(props: ProfilePage.Props) {
-  const tabs = useTabs("overview", [
-    { id: "assigned", label: "Assigned", icon: <IconClipboardCheck size={14} /> },
-    { id: "reviewing", label: "Reviewing", icon: <IconEye size={14} /> },
-    { id: "activity", label: "Recent activity", icon: <IconLogs size={14} /> },
-    { id: "about", label: "About", icon: <IconUserCircle size={14} /> },
-  ]);
+  const tabs = useTabs(
+    "overview",
+    [
+      { id: "assigned", label: "Assigned", icon: <IconClipboardCheck size={14} /> },
+      { id: "reviewing", label: "Reviewing", icon: <IconEye size={14} /> },
+      { id: "activity", label: "Recent activity", icon: <IconLogs size={14} /> },
+      { id: "about", label: "About", icon: <IconUserCircle size={14} /> },
+    ],
+    "view",
+  );
 
   return (
     <Page title={props.title} size="fullwidth">
       <PageHeader person={props.person} />
       <Tabs tabs={tabs} />
 
-      {tabs.active === "assigned" && <WorkMap title="Assigned work" items={props.workMap} type="personal" />}
+      {tabs.active === "assigned" && <WorkMap items={props.workMap} type="personal" tabsLayout="dropdown" />}
       {tabs.active === "activity" && <ActivityFeed {...props} />}
       {tabs.active === "about" && <About {...props} />}
     </Page>

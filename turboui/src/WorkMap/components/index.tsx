@@ -7,6 +7,7 @@ import { Page } from "../../Page";
 import { WorkMapNavigation } from "./WorkMapNavigation";
 import { WorkMapTable } from "./WorkMapTable";
 import { useWorkMapTab } from "../hooks/useWorkMapTab";
+import { Tabs } from "../../Tabs";
 
 export function WorkMapPage(props: WorkMap.Props) {
   return (
@@ -16,18 +17,25 @@ export function WorkMapPage(props: WorkMap.Props) {
   );
 }
 
-export function WorkMap({ title, items, columnOptions = {}, tabOptions = {}, type = "company" }: WorkMap.Props) {
+interface Props extends Omit<WorkMap.Props, "title"> {
+  title?: string;
+  tabsLayout?: Tabs.Layout;
+}
+
+export function WorkMap({ title, items, columnOptions = {}, tabOptions = {}, type = "company", tabsLayout }: Props) {
   const { filteredItems, tabsState, tab } = useWorkMapTab({ rawItems: items, type, opts: { tabOptions } });
 
   return (
     <div className="flex flex-col w-full bg-surface-base rounded-lg">
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-3 border-b border-surface-outline">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <h1 className="text-sm sm:text-base font-bold text-content-accent">{title}</h1>
-        </div>
-      </header>
+      {title && (
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-3 border-b border-surface-outline">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <h1 className="text-sm sm:text-base font-bold text-content-accent">{title}</h1>
+          </div>
+        </header>
+      )}
       <div className="flex-1 overflow-auto">
-        <WorkMapNavigation tabsState={tabsState} />
+        <WorkMapNavigation tabsState={tabsState} layout={tabsLayout} />
         <WorkMapTable items={filteredItems} tab={tab} columnOptions={columnOptions} />
       </div>
     </div>
