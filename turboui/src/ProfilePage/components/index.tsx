@@ -5,6 +5,7 @@ import { ProfilePage } from "../index";
 import { IconMail } from "@tabler/icons-react";
 
 export { Colleagues } from "./Colleagues";
+export * as Tabs from "./Tabs";
 
 export function PageHeader({ person }: { person: ProfilePage.Person }) {
   return (

@@ -1,11 +1,9 @@
 import React from "react";
-
-import { IconLogs, IconEye, IconClipboardCheck, IconUserCircle } from "@tabler/icons-react";
+import { useLocation } from "react-router-dom";
 
 import { Page } from "../Page";
-import { Tabs, useTabs } from "../Tabs";
 import { WorkMap } from "../WorkMap";
-import { Colleagues, PageHeader, Contact } from "./components";
+import { Colleagues, PageHeader, Contact, Tabs } from "./components";
 
 export namespace ProfilePage {
   export interface Person {
@@ -32,21 +30,24 @@ export namespace ProfilePage {
 }
 
 export function ProfilePage(props: ProfilePage.Props) {
-  const tabs = useTabs("overview", [
-    { id: "assigned", label: "Assigned", icon: <IconClipboardCheck size={14} /> },
-    { id: "reviewing", label: "Reviewing", icon: <IconEye size={14} /> },
-    { id: "activity", label: "Recent activity", icon: <IconLogs size={14} /> },
-    { id: "about", label: "About", icon: <IconUserCircle size={14} /> },
-  ]);
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const activeView = searchParams.get("view") || "assigned";
 
   return (
     <Page title={props.title} size="fullwidth">
       <PageHeader person={props.person} />
-      <Tabs tabs={tabs} />
 
-      {tabs.active === "assigned" && <WorkMap title="Assigned work" items={props.workMap} type="personal" />}
-      {tabs.active === "activity" && <ActivityFeed {...props} />}
-      {tabs.active === "about" && <About {...props} />}
+      <Tabs.Root activeView={activeView}>
+        <Tabs.Tab id="assigned" label="Assigned" view="assigned" />
+        <Tabs.Tab id="reviewing" label="Reviewing" view="reviewing" />
+        <Tabs.Tab id="activity" label="Recent activity" view="activity" />
+        <Tabs.Tab id="about" label="About" view="about" />
+      </Tabs.Root>
+
+      {activeView === "assigned" && <WorkMap items={props.workMap} type="personal" />}
+      {activeView === "activity" && <ActivityFeed {...props} />}
+      {activeView === "about" && <About {...props} />}
     </Page>
   );
 }
