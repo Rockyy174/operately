@@ -430,6 +430,7 @@ defmodule OperatelyWeb.Api.Projects do
     inputs do
       field :task_id, :id, null: false
       field :milestone_id, :id, null: false
+      field? :column_index, :integer, null: true
     end
 
     outputs do
@@ -442,7 +443,7 @@ defmodule OperatelyWeb.Api.Projects do
       |> Steps.find_task(inputs.task_id)
       |> Steps.check_task_permissions(:can_edit_task)
       |> Steps.validate_milestone_belongs_to_project(inputs.milestone_id)
-      |> Steps.update_task_milestone(inputs.milestone_id)
+      |> Steps.update_task_milestone(inputs.milestone_id, inputs.column_index)
       |> Steps.save_activity(:task_milestone_updating, fn changes ->
         %{
           company_id: changes.project.company_id,
@@ -850,12 +851,58 @@ defmodule OperatelyWeb.Api.Projects do
       end)
     end
 
-    def update_task_milestone(multi, new_milestone_id) do
-      Ecto.Multi.run(multi, :updated_task, fn _repo, changes ->
+    def update_task_milestone(multi, new_milestone_id, column_index \\ nil) do
+      multi
+      |> Ecto.Multi.run(:old_milestone, fn _repo, changes ->
+        if changes.task.milestone_id do
+          {:ok, Operately.Projects.get_milestone!(changes.task.milestone_id)}
+        else
+          {:ok, nil}
+        end
+      end)
+      |> Ecto.Multi.run(:updated_task, fn _repo, changes ->
         {:ok, task} = Operately.Tasks.update_task(changes.task, %{milestone_id: new_milestone_id})
         task = Map.put(task, :milestone, changes.validate_milestone)
 
         {:ok, task}
+      end)
+      |> update_kanban_states_for_milestone_change(column_index)
+    end
+
+    defp update_kanban_states_for_milestone_change(multi, column_index) do
+      multi
+      |> update_old_milestone_kanban_state()
+      |> update_new_milestone_kanban_state(column_index)
+    end
+
+    defp update_old_milestone_kanban_state(multi) do
+      Ecto.Multi.run(multi, :updated_old_milestone, fn _repo, changes ->
+        case changes.old_milestone do
+          nil -> {:ok, nil}
+          old_milestone ->
+            # Remove task from old milestone's kanban state
+            kanban_state = Operately.Tasks.KanbanState.load(old_milestone.tasks_kanban_state)
+            task_status = changes.task.status || "todo"
+            kanban_state = Operately.Tasks.KanbanState.remove(kanban_state, changes.task.id, task_status)
+            
+            changeset = Operately.Projects.Milestone.changeset(old_milestone, %{tasks_kanban_state: kanban_state})
+            Operately.Repo.update(changeset)
+        end
+      end)
+    end
+
+    defp update_new_milestone_kanban_state(multi, column_index) do
+      Ecto.Multi.run(multi, :updated_new_milestone, fn _repo, changes ->
+        new_milestone = changes.validate_milestone
+        
+        # Add task to new milestone's kanban state
+        kanban_state = Operately.Tasks.KanbanState.load(new_milestone.tasks_kanban_state)
+        task_status = changes.task.status || "todo"
+        index = column_index || 0
+        kanban_state = Operately.Tasks.KanbanState.add(kanban_state, changes.task.id, task_status, index)
+        
+        changeset = Operately.Projects.Milestone.changeset(new_milestone, %{tasks_kanban_state: kanban_state})
+        Operately.Repo.update(changeset)
       end)
     end
 

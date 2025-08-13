@@ -3,6 +3,7 @@ import { PrimaryButton } from "../../Button";
 import { DragAndDropProvider } from "../../utils/DragAndDrop";
 import { reorderTasks } from "../utils/taskReorderingUtils";
 import { applyFilters } from "../utils/taskFilterUtils";
+import { sortTasksByKanbanIndex } from "../utils/taskSortingUtils";
 import * as Types from "../types";
 import { IconPlus } from "../../icons";
 import TaskCreationModal from "./TaskCreationModal";
@@ -31,10 +32,11 @@ export function TaskBoard({
   const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
   const [activeTaskMilestoneId, setActiveTaskMilestoneId] = useState<string | undefined>();
 
-  // Keep internal tasks in sync with external tasks
+  // Keep internal tasks in sync with external tasks and sort them by kanban index
   useEffect(() => {
-    setInternalTasks(externalTasks);
-  }, [externalTasks]);
+    const sortedTasks = sortTasksByKanbanIndex(externalTasks, externalMilestones);
+    setInternalTasks(sortedTasks);
+  }, [externalTasks, externalMilestones]);
 
   // Check if any filters are applied
   const hasAnyFilters = useMemo(() => {
@@ -126,7 +128,7 @@ export function TaskBoard({
       console.log(`Handling reorder: ${draggedId} to ${dropZoneId} at index ${indexInDropZone}`);
 
       if (onTaskMilestoneChange) {
-        onTaskMilestoneChange(draggedId, dropZoneId);
+        onTaskMilestoneChange(draggedId, dropZoneId, indexInDropZone);
       } else {
         // Get all milestone objects for the utility function
         const allMilestones = milestones.map((m) => m.milestone);
