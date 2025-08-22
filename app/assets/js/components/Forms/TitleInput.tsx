@@ -68,6 +68,8 @@ export function TitleInput(props: TitleInputProps) {
       
       return () => clearTimeout(timer);
     }
+
+    return undefined;
   }, [props.autoFocus, props.readonly]);
 
   return (
