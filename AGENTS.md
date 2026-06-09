@@ -131,3 +131,45 @@ Read the testing guide at app/test/AGENTS.md.
 
 - Local env: run `make dev.seed.env` to scaffold `.env` and certs. Never commit secrets.
 - Use `./devenv` wrapper (Docker-based) for consistent tooling and DB.
+
+## Cursor Cloud specific instructions
+
+Operately runs entirely inside Docker via `./devenv`; the host only needs **Docker**, **Make**, and **git**. Elixir, Node, and PostgreSQL live in the `operately/operately-dev:latest` container.
+
+### First-time / cold start
+
+1. Ensure Docker is running (`dockerd` with `fuse-overlayfs` storage driver works in nested VMs).
+2. Run `make dev.build` once (pulls images, installs deps, creates/migrates DBs, builds TurboUI).
+3. Start services if not already up: `./devenv up`
+4. Start Phoenix: `make dev.server` (serves at http://localhost:4000; Vite HMR on port 4005).
+
+The update script refreshes Elixir/npm deps inside the running container; it does **not** start Docker or run migrations. After pulling schema changes, run `make dev.db.migrate` (and `make test.db.migrate` for tests).
+
+### Services (default `PORT_OFFSET=4000`)
+
+| Service | URL | Notes |
+|---|---|---|
+| Phoenix app | http://localhost:4000 | Main UI + `/api/v2` |
+| Vite | http://localhost:4005 | Auto-started by Phoenix watcher |
+| pgweb | http://localhost:4006 | Optional DB browser (`dev` profile) |
+| S3 mock | http://localhost:4007 | Local blob storage mock |
+| Dev mailbox | http://localhost:4000/dev/mailbox | Email activation codes in dev |
+
+PostgreSQL (`db` service) is internal only; credentials are in `docker-compose.yml`.
+
+### Testing & lint
+
+- TypeScript: `make test.tsc.lint`
+- Elixir unit: `make test FILE=test/path/to_test.exs` (path relative to `app/`, no `app/` prefix)
+- Jest: `make test.npm FILE=assets/js/path.test.tsx`
+- TurboUI: `make turboui.test`
+
+### Local auth for manual testing
+
+Email signup is enabled by `make dev.seed.env` (`ALLOW_SIGNUP_WITH_EMAIL=yes`). Activation codes appear at `/dev/mailbox`. Demo companies can be created via the UI setup flow or API (`add_company` with `is_demo: true` when `OPERATELY_DEMO_BUILDER_ALLOWED=true`).
+
+### Gotchas
+
+- `./devenv bash -c "..."` requires the compose stack to be up (`./devenv up`); otherwise exec fails.
+- Only one Phoenix dev server should run; `make dev.server` kills stray Vite processes first.
+- For targeted Elixir tests, use `make test FILE=test/...` not `make test FILE=app/test/...`.
