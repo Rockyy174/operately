@@ -1,5 +1,5 @@
 defmodule Operately.Mcp.ClientMetadataTest do
-  use ExUnit.Case, async: false
+  use Operately.DataCase, async: false
   import Mock
 
   alias Operately.Mcp.ClientMetadata

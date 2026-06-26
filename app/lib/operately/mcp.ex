@@ -2,6 +2,7 @@ defmodule Operately.Mcp do
   alias Operately.Billing
   alias Operately.Mcp.{ClientMetadata, Grant, Resources, Session}
   alias Operately.Mcp.Operations.Authorization
+  alias Operately.Mcp.Operations.ClientRegistration
   alias Operately.Mcp.Operations.Grant, as: GrantOps
   alias Operately.Mcp.Operations.Session, as: SessionOps
   alias Operately.Mcp.Operations.TokenExchange
@@ -24,6 +25,7 @@ defmodule Operately.Mcp do
   def get_session(id), do: Repo.get(Session, id)
 
   defdelegate authorize_client_request(params), to: Authorization
+  defdelegate register_client(params), to: ClientRegistration, as: :register
   defdelegate exchange_authorization_code(attrs), to: TokenExchange
   defdelegate refresh_access_token(attrs), to: TokenExchange
   defdelegate authenticate_access_token(raw_token, resource), to: TokenExchange

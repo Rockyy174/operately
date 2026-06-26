@@ -59,6 +59,18 @@ defmodule OperatelyWeb.McpOAuthController do
     end
   end
 
+  def register(conn, _params) do
+    case Mcp.register_client(conn.body_params) do
+      {:ok, response} ->
+        conn
+        |> put_status(:created)
+        |> json(response)
+
+      {:error, reason} ->
+        registration_json_error(conn, reason)
+    end
+  end
+
   def token(conn, params) do
     conn =
       conn
@@ -192,6 +204,20 @@ defmodule OperatelyWeb.McpOAuthController do
 
     conn
     |> put_status(status)
+    |> json(%{error: error, error_description: description})
+  end
+
+  defp registration_json_error(conn, reason) do
+    {error, description} =
+      case reason do
+        :invalid_redirect_uri -> {"invalid_redirect_uri", "One or more redirect URIs are invalid or unsupported."}
+        :unsupported_client_authentication -> {"invalid_client_metadata", "Only public clients using token_endpoint_auth_method=none are supported."}
+        :invalid_client_metadata -> {"invalid_client_metadata", "The client registration request is missing required fields or contains invalid values."}
+        _ -> {"invalid_client_metadata", "The client registration request could not be completed."}
+      end
+
+    conn
+    |> put_status(:bad_request)
     |> json(%{error: error, error_description: description})
   end
 

@@ -55,6 +55,53 @@ defmodule OperatelyWeb.McpControllerTest do
     assert get_resp_header(conn, "www-authenticate") |> List.first() =~ "resource_metadata="
   end
 
+  test "completes register, authorize, token, and tools/list for a dynamically registered client", %{account: account, company: company} do
+    Application.put_env(:operately, :mcp_oauth_clients, [])
+
+    redirect_uri = "cursor://anysphere.cursor-mcp/oauth/callback"
+
+    register_conn =
+      build_conn()
+      |> put_req_header("content-type", "application/json")
+      |> post("/oauth/register", %{
+        "client_name" => "Cursor",
+        "redirect_uris" => [redirect_uri],
+        "token_endpoint_auth_method" => "none"
+      })
+
+    register_body = Jason.decode!(register_conn.resp_body)
+
+    assert register_conn.status == 201
+
+    client = %{
+      client_id: register_body["client_id"],
+      client_name: register_body["client_name"],
+      redirect_uris: register_body["redirect_uris"]
+    }
+
+    %{access_token: access_token} = authorize_and_issue_tokens(account, company, client)
+
+    {initialize_conn, session_id} = initialize_session(access_token)
+    assert initialize_conn.status == 200
+
+    tools_list_conn =
+      build_conn()
+      |> authenticated_mcp_headers(access_token)
+      |> put_req_header("mcp-session-id", session_id)
+      |> put_req_header("mcp-protocol-version", Mcp.latest_protocol_version())
+      |> post("/mcp", %{
+        "jsonrpc" => "2.0",
+        "id" => "dcr-tools-list",
+        "method" => "tools/list"
+      })
+
+    tools_list_body = Jason.decode!(tools_list_conn.resp_body)
+
+    assert tools_list_conn.status == 200
+    assert is_list(tools_list_body["result"]["tools"])
+    assert tools_list_body["result"]["tools"] != []
+  end
+
   test "rejects invalid origins", %{account: account, company: company, client: client} do
     %{access_token: access_token} = authorize_and_issue_tokens(account, company, client)
 

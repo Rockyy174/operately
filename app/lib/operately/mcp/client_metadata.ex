@@ -3,7 +3,8 @@ defmodule Operately.Mcp.ClientMetadata do
   Resolves OAuth client metadata for the MCP authorization flow.
 
   Pre-registered clients come from `:mcp_oauth_clients`. CIMD clients are
-  resolved by fetching and parsing a Client ID Metadata Document.
+  resolved by fetching and parsing a Client ID Metadata Document. Dynamically
+  registered clients are loaded from `mcp_registered_clients`.
   """
 
   require Logger
@@ -12,16 +13,22 @@ defmodule Operately.Mcp.ClientMetadata do
 
   alias __MODULE__
   alias Operately.Mcp.ClientMetadata.{Document, Fetcher}
+  alias Operately.Mcp.RegisteredClient
 
   @localhost_hosts ["localhost", "127.0.0.1", "::1"]
 
   @doc """
-  Resolves one OAuth client definition from the allowlist or a CIMD document.
+  Resolves one OAuth client definition from the allowlist, a CIMD document,
+  or a dynamically registered client record.
   """
   def resolve(client_id) when is_binary(client_id) do
     case configured_clients() |> Enum.find_value(&match_client(&1, client_id)) do
       %ClientMetadata{} = metadata -> validate_auth_method(metadata)
-      nil -> resolve_cimd(client_id)
+      nil ->
+        cond do
+          Document.cimd_client_id?(client_id) -> resolve_cimd(client_id)
+          true -> resolve_registered(client_id)
+        end
     end
   end
 
@@ -78,20 +85,26 @@ defmodule Operately.Mcp.ClientMetadata do
   end
 
   defp resolve_cimd(client_id) do
-    if Document.cimd_client_id?(client_id) do
-      with {:ok, document} <- Fetcher.fetch(client_id),
-           {:ok, metadata} <- Document.parse(client_id, document) do
-        validate_auth_method(metadata)
-      else
-        {:error, :unsupported_client_authentication} = error ->
-          error
-
-        {:error, reason} ->
-          Logger.warning("MCP CIMD client resolution failed: #{inspect(%{client_id: client_id, reason: reason})}")
-          {:error, :invalid_client}
-      end
+    with {:ok, document} <- Fetcher.fetch(client_id),
+         {:ok, metadata} <- Document.parse(client_id, document) do
+      validate_auth_method(metadata)
     else
-      {:error, :invalid_client}
+      {:error, :unsupported_client_authentication} = error ->
+        error
+
+      {:error, reason} ->
+        Logger.warning("MCP CIMD client resolution failed: #{inspect(%{client_id: client_id, reason: reason})}")
+        {:error, :invalid_client}
+    end
+  end
+
+  defp resolve_registered(client_id) do
+    case RegisteredClient.get_by_client_id(client_id) do
+      %RegisteredClient{} = registered_client ->
+        registered_client |> RegisteredClient.to_client_metadata() |> validate_auth_method()
+
+      nil ->
+        {:error, :invalid_client}
     end
   end
 

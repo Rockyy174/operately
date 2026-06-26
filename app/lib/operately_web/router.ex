@@ -91,7 +91,9 @@ defmodule OperatelyWeb.Router do
     get("/.well-known/oauth-protected-resource", McpMetadataController, :protected_resource)
     get("/.well-known/oauth-protected-resource/mcp", McpMetadataController, :protected_resource)
     get("/.well-known/oauth-authorization-server", McpMetadataController, :authorization_server)
+    get("/.well-known/oauth-authorization-server/mcp", McpMetadataController, :authorization_server)
     post("/oauth/token", McpOAuthController, :token)
+    post("/oauth/register", McpOAuthController, :register)
   end
 
   scope "/", OperatelyWeb do

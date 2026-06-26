@@ -27,6 +27,40 @@ defmodule OperatelyWeb.McpOAuthControllerTest do
     %{client: client}
   end
 
+  test "registers a public client", %{conn: conn} do
+    conn =
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> post("/oauth/register", %{
+        "client_name" => "Cursor",
+        "redirect_uris" => ["cursor://anysphere.cursor-mcp/oauth/callback"],
+        "token_endpoint_auth_method" => "none"
+      })
+
+    body = Jason.decode!(conn.resp_body)
+
+    assert conn.status == 201
+    assert body["client_id"] =~ "opmd_"
+    assert body["client_name"] == "Cursor"
+    assert body["redirect_uris"] == ["cursor://anysphere.cursor-mcp/oauth/callback"]
+    assert body["token_endpoint_auth_method"] == "none"
+  end
+
+  test "rejects invalid client registration requests", %{conn: conn} do
+    conn =
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> post("/oauth/register", %{
+        "client_name" => "Bad Client",
+        "redirect_uris" => ["http://evil.example.com/callback"]
+      })
+
+    body = Jason.decode!(conn.resp_body)
+
+    assert conn.status == 400
+    assert body["error"] == "invalid_redirect_uri"
+  end
+
   test "redirects unauthenticated users to log in", %{conn: conn, client: client} do
     params = authorize_params(client, client.redirect_uris |> hd())
 

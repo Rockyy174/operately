@@ -25,6 +25,7 @@ defmodule OperatelyWeb.McpMetadataControllerTest do
              "issuer" => issuer,
              "authorization_endpoint" => authorization_endpoint,
              "token_endpoint" => token_endpoint,
+             "registration_endpoint" => registration_endpoint,
              "grant_types_supported" => grant_types_supported,
              "code_challenge_methods_supported" => code_challenge_methods_supported,
              "client_id_metadata_document_supported" => client_id_metadata_document_supported
@@ -34,8 +35,17 @@ defmodule OperatelyWeb.McpMetadataControllerTest do
     assert issuer == OperatelyWeb.Endpoint.url()
     assert authorization_endpoint == OperatelyWeb.Endpoint.url() <> "/oauth/authorize"
     assert token_endpoint == OperatelyWeb.Endpoint.url() <> "/oauth/token"
+    assert registration_endpoint == OperatelyWeb.Endpoint.url() <> "/oauth/register"
     assert grant_types_supported == ["authorization_code", "refresh_token"]
     assert code_challenge_methods_supported == ["S256"]
     assert client_id_metadata_document_supported == true
+  end
+
+  test "serves authorization server metadata on the mcp-scoped discovery path", %{conn: conn} do
+    root_conn = get(conn, "/.well-known/oauth-authorization-server")
+    mcp_conn = get(build_conn(), "/.well-known/oauth-authorization-server/mcp")
+
+    assert mcp_conn.status == 200
+    assert Jason.decode!(mcp_conn.resp_body) == Jason.decode!(root_conn.resp_body)
   end
 end

@@ -172,13 +172,14 @@ PRs 1–4 accept only pre-registered OAuth clients configured on the Operately s
 
 PR 5 adds Client ID Metadata Documents (CIMD) so arbitrary MCP clients can onboard without a server-side config entry, while keeping the `:mcp_oauth_clients` allowlist as the fast path for directory partners.
 
-Resolution order after PR 5:
+PR 6 adds Dynamic Client Registration (DCR, RFC 7591) for clients such as Cursor that register an OAuth client at connect time instead of using a URL-based CIMD `client_id`.
+
+Resolution order after PR 6:
 
 1. match `:mcp_oauth_clients` config
-2. if `client_id` is a valid HTTPS metadata URL, fetch and validate the document
-3. reject unknown clients
-
-Dynamic Client Registration remains out of scope unless a later client ecosystem need justifies it.
+2. if `client_id` is a valid HTTPS metadata URL, fetch and validate the CIMD document
+3. if `client_id` matches a dynamically registered client, load stored registration metadata
+4. reject unknown clients
 
 ---
 
@@ -260,7 +261,7 @@ To maximize compatibility with ChatGPT, Claude, and IDE clients, the first relea
 - implement Streamable HTTP as the primary transport
 - implement OAuth-protected remote MCP discovery correctly, including Protected Resource Metadata and Authorization Server Metadata
 - bind access tokens to the MCP server correctly, including resource indicators and audience validation
-- support pre-registered OAuth clients in PRs 1–4; add Client ID Metadata Documents in PR 5
+- support pre-registered OAuth clients in PRs 1–4; add Client ID Metadata Documents in PR 5; add Dynamic Client Registration in PR 6
 - validate the `Origin` header on Streamable HTTP requests
 - honor protocol version negotiation and required MCP HTTP headers
 - keep tool schemas strict and portable by using standards-compliant JSON Schema
@@ -492,28 +493,44 @@ Outcome: arbitrary standards-compliant MCP clients can complete OAuth and call t
 
 Status: implemented.
 
-### PR 5D: CIMD operational guardrails
+### PR 6: Dynamic Client Registration (DCR)
 
-- Add rate limiting for metadata fetches and OAuth endpoints (per IP and per `client_id` URL)
-- Add structured logging and basic metrics for CIMD fetch outcomes, cache hit rate, and invalid-client rate
-- Validate against at least one real URL-based MCP client before production rollout
+- Add `registration_endpoint` to authorization server metadata and `POST /oauth/register` (RFC 7591 subset)
+- Add `GET /.well-known/oauth-authorization-server/mcp` returning the same JSON as the root authorization-server metadata (ChatGPT probes the MCP-scoped path)
+- Persist dynamically registered public clients in `mcp_registered_clients` with server-issued opaque `client_id` values
+- Accept only `token_endpoint_auth_method: "none"`; do not issue `client_secret`
+- Validate `redirect_uris` on registration: `https://`, localhost HTTP, and IDE callback schemes such as `cursor://`
+- Extend `Operately.Mcp.ClientMetadata.resolve/1` resolution order: config allowlist → CIMD → registered client → `invalid_client`
+- Reuse existing authorize, token, and MCP flows unchanged after registration
+- Add unit tests for registration validation, resolve precedence, and redirect-uri policy
+- Add integration test: register → authorize → token → `tools/list` using a Cursor-style `cursor://` redirect URI
+
+Outcome: Cursor and other DCR-first MCP clients can complete OAuth without a server-side allowlist entry or CIMD document.
+
+Status: implemented.
+
+### PR 7: CIMD operational guardrails
+
+- Add rate limiting for metadata fetches, OAuth endpoints, and client registration (per IP and per `client_id` URL)
+- Add structured logging and basic metrics for CIMD fetch outcomes, cache hit rate, invalid-client rate, and DCR registration rate
+- Validate against at least one real URL-based MCP client and one DCR client (e.g. Cursor) before production rollout
 - Keep known directory clients in `:mcp_oauth_clients` as overrides
 
-Outcome: CIMD runs in production without opening an unbounded SSRF or abuse surface.
+Outcome: CIMD and DCR run in production without opening an unbounded SSRF or abuse surface.
 
 Defer unless needed:
 
-- Dynamic Client Registration (RFC 7591)
-- DB-persisted metadata cache
+- DB-persisted CIMD metadata cache
 - confidential-client auth methods beyond `none`
+- RFC 7592 client registration management (update/delete)
 
-### PR 6: Submission hardening
+### PR 8: Submission hardening
 
 - Privacy policy / support URLs / branding assets
 - Reviewer test accounts and test companies
-- Rate limiting, audit logging, and operational visibility beyond CIMD-specific guardrails
+- Rate limiting, audit logging, and operational visibility beyond CIMD/DCR-specific guardrails
 - Other remote-MCP security hardening
-- Final validation in ChatGPT, Claude, and at least one generic MCP client / IDE
+- Final validation in ChatGPT, Claude, Cursor, and at least one generic MCP client / IDE
 
 Outcome: the MCP is ready for directory submission.
 
@@ -553,6 +570,11 @@ Critical scenarios:
 - allowlisted clients still resolve through config alongside CIMD resolution
 - CIMD metadata fetch blocks SSRF targets and rejects redirect URIs not listed in the fetched document
 - CIMD cache respects TTL and does not serve stale metadata past expiry
+- DCR registration returns a usable `client_id` and accepts `cursor://` redirect URIs for IDE clients
+- dynamically registered clients complete OAuth and MCP tool discovery without allowlist or CIMD entries
+- allowlist and CIMD still take precedence over DCR for the same `client_id`
+- authorization server metadata advertises `registration_endpoint`
+- `/.well-known/oauth-authorization-server/mcp` returns JSON discovery metadata
 
 ---
 
@@ -574,4 +596,4 @@ If implemented this way, Operately gets:
 - one new auth mode alongside the session and token flows
 - one-company-per-connection UX with request-time company context
 - MCP wrapper reuse of existing Operately API handlers and the shared modules those handlers already depend on
-- standards-based open client onboarding through Client ID Metadata Documents, with a curated allowlist override for directory partners
+- standards-based open client onboarding through Client ID Metadata Documents and Dynamic Client Registration, with a curated allowlist override for directory partners
